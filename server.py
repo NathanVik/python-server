@@ -2,7 +2,7 @@
 #second most popular, with the most popular being Django
 
 import re
-from flask import Flask, render_template
+from flask import Flask, render_template, abort, request
 import json
 from data import data
 
@@ -55,6 +55,17 @@ def email():
 def get_catalog():
     return json.dumps(data)
 
+#get post request and save to data
+
+@app.route('/api/catalog', methods=['POST'])
+def save_product():
+    product = request.get_json() #gets the dictionary 
+    data.append(product)
+
+    return json.dumps(product)
+
+
+
 @app.route("/api/categories")
 def get_categories():
     #did it on front end by using for loop, now on back end
@@ -67,8 +78,35 @@ def get_categories():
     
     return json.dumps(results)
 
+# get a product by its ID
+@app.route("/api/catalog/id/<id>") # URL Parameters, whatever is in the URL gets sent as the param in the function
+def get_product_by_id(id):
+    #return ("Getting by " + id)
+    for item in data:
+        if(str(item["_id"]) == id):
+            return json.dumps(item)
+    abort(404)
 
+# get all the products belonging to category
+@app.route("/api/catalog/category/<cat>")
+def get_product_by_category(cat):
+    results = []
+    for item in data:
+        if item["category"].lower() == cat.lower():
+            results.append(item)
+    return json.dumps(results)
 
+@app.route("/api/catalog/cheapest")
+def get_product_cheapest():
+    cheapest = data[0]      # set cheapest to first item
+    for item in data:
+        if item["price"] < cheapest["price"]:       #compare prices, replace if cheaper
+            cheapest = item
+    results = []
+    for item in data:
+        if item["price"] == cheapest["price"]:      #add all of lowest price to list
+            results.append(item)
+    return json.dumps(results)
 
 
 if __name__ == '__main__':
