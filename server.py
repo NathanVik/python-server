@@ -4,7 +4,7 @@
 from flask import Flask, render_template, abort, request
 import json
 
-from pymongo import cursor
+from pymongo import cursor, results
 from data import data
 from flask_cors import CORS
 from config import db, parse_json
@@ -104,10 +104,11 @@ def get_categories():
 @app.route("/api/catalog/id/<id>") # URL Parameters, whatever is in the URL gets sent as the param in the function
 def get_product_by_id(id):
     #return ("Getting by " + id)
-    for item in data:
-        if(str(item["_id"]) == id):
-            return parse_json(item)
-    abort(404)
+    product = db.products.find_one({"_id": id})
+    if not product:
+        abort(404)
+    return parse_json(product)
+
 
 # get all the products belonging to category
 @app.route("/api/catalog/category/<cat>")
@@ -150,8 +151,8 @@ def get_coupon_codes():
 def create_coupon_code():
     code = request.get_json() #gets the dictionary 
     #validations
-    if not "_id" in code:
-        return parse_json({"error":"specify item by _id", "success":False })
+    if not "code" in code:
+        return parse_json({"error":"specify item code", "success":False })
     
     if not "discount" in code or not code["discount"] > 0:
         return parse_json({"error":"positive discount '%' is required", "success":False })
@@ -159,23 +160,54 @@ def create_coupon_code():
     db.couponcodes.insert_one(code)
     return parse_json(code)
 
-@app.route("/api/coupons/search/<id>")
-def coupon_search(id):
-    cursor = db.couponcodes.find({ "_id" : id }) #lists codes for all products with this ID
-    results = [prod for prod in cursor]
+@app.route("/api/coupons/search/<code>")
+def coupon_search(code):
+    cursor = db.couponcodes.find_one({ "code" : code }) #lists codes for all products with this ID
+    return parse_json(cursor)
+
+
+#
+## ORDERS
+#
+
+#Post Order
+@app.route("/api/orders", methods=['POST'])
+def create_order():
+    new_order = request.get_json()
+# validate at least 1 product
+    prods = new_order["cart"]
+    count = len(prods)
+    if(count < 1):
+        abort(400, "Orders without products are not allowed!")
+
+    db.orders.insert_one(new_order)
+    return parse_json(new_order)
+
+#get all orders
+@app.route("/api/orders")
+def get_all_orders():
+    cursor = db.orders.find({})
+    results = [orders for orders in cursor]
     return parse_json(results)
+
+@app.route("/api/orders/<userID>")
+def get_ID_orders(userID):
+    cursor = db.orders.find({ "userID" : userID }) 
+    results = [orders for orders in cursor]
+    return parse_json(results)
+
 
 if __name__ == '__main__':
     app.run(debug=True)
 
 
 #
-#   coupon codes
-#   db.couponcodes
-#   code, discount
+#   Order:
+#   post order
+#   get all orders
+#   get orders by userID
 #
-#   create a GET to read all
-#   create a POST to add discount codes
-#   create a GET to search by code, exists and discount > 0
+#
+#
 #
 #
