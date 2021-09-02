@@ -179,6 +179,30 @@ def create_order():
     count = len(prods)
     if(count < 1):
         abort(400, "Orders without products are not allowed!")
+    
+    #get prices for items in order
+    #console log id of each prod
+    cart_total = 0
+    for item in prods:
+        id = item['_id'] #find ID of each time
+        db_item = db.products.find_one({'_id': id}) #look up item in DB via cart item ID
+        item['price'] = db_item['price'] #set DB price as price in the order
+        
+        item_total = item['price']*item['quantity']
+        cart_total += item_total
+
+    print('the cart total is ', cart_total)
+    if 'discountCode' in new_order and new_order['discountCode']:
+        code = new_order['discountCode']
+        coupon = db.couponcodes.find_one({ "code": code })
+        if coupon:
+            discount = coupon["discount"]
+            cart_total = cart_total * discount
+        else:
+            new_order["discountCode"] = "Invalid"
+            
+    print('the cart total with discount is ', cart_total)
+    new_order["total"] = cart_total
 
     db.orders.insert_one(new_order)
     return parse_json(new_order)
