@@ -214,22 +214,17 @@ def get_all_orders():
     results = [orders for orders in cursor]
     return parse_json(results)
 
-@app.route("/api/orders/<userID>")
-def get_ID_orders(userID):
-    cursor = db.orders.find({ "userID" : userID }) 
+@app.route("/api/orders/<int:user>")
+def get_ID_orders(user):
+    cursor = db.orders.find({ "userID" : user }) 
     results = [orders for orders in cursor]
     return parse_json(results)
 
 
-if __name__ == '__main__':
-    app.run(debug=True)
+# if __name__ == '__main__':
+#     app.run(debug=True)
 
 
-#
-#   Order:
-#   post order
-#   get all orders
-#   get orders by userID
 #
 #
 #
